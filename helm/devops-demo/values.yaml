@@ -3,7 +3,7 @@ replicaCount: 2
 image:
   # EKS: <account>.dkr.ecr.<region>.amazonaws.com/devops-demo
   # AKS: <acr-name>.azurecr.io/devops-demo
-  repository: ghcr.io/your-github-username/devops-demo
+  repository: ghcr.io/shashikarbari-byte/devops-demo
   tag: ""            # defaults to .Chart.AppVersion
   pullPolicy: IfNotPresent
 
