@@ -1,0 +1,44 @@
+name: Deploy to EKS (manual)
+
+# Uses GitHub OIDC -> AWS IAM role, so no long-lived AWS keys are stored in GitHub.
+# Setup required: an IAM OIDC provider for GitHub, a role trusted by this repo,
+# and the secrets/vars below.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to deploy (e.g. a commit SHA)
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: azure/setup-helm@v4
+
+      - name: Configure kubectl
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${{ vars.AWS_REGION }}"
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install devops-demo helm/devops-demo \
+            --namespace demo --create-namespace \
+            --set image.repository="${{ vars.ECR_REPOSITORY_URL }}" \
+            --set image.tag="${{ inputs.image_tag }}" \
+            --wait --timeout 5m
+
+      - name: Smoke test
+        run: kubectl -n demo rollout status deploy/devops-demo --timeout=120s

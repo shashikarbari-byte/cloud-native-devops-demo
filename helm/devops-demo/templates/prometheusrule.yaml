@@ -1,0 +1,38 @@
+{{- if .Values.monitoring.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "devops-demo.fullname" . }}
+  labels:
+    {{- include "devops-demo.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: {{ include "devops-demo.fullname" . }}.rules
+      rules:
+        - alert: DevopsDemoHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+              / sum(rate(http_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "More than 5% of requests are failing"
+        - alert: DevopsDemoHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "p95 latency is above 500ms"
+        - alert: DevopsDemoPodNotReady
+          expr: |
+            kube_deployment_status_replicas_available{deployment="{{ include "devops-demo.fullname" . }}"} < 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "No available replicas"
+{{- end }}

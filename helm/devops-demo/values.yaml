@@ -1,0 +1,50 @@
+replicaCount: 2
+
+image:
+  # EKS: <account>.dkr.ecr.<region>.amazonaws.com/devops-demo
+  # AKS: <acr-name>.azurecr.io/devops-demo
+  repository: ghcr.io/your-github-username/devops-demo
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+env:
+  APP_ENV: dev
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Requires the Prometheus Operator CRDs (e.g. kube-prometheus-stack).
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+  prometheusRule:
+    enabled: false
